@@ -13,9 +13,62 @@ resource "aws_lb" "ecs-deploy" {
 # =================================================
 
 
-# === Target Group ================================
-resource "aws_lb_target_group" "ecs-deploy" {
-  name        = "ecs-deploy-lb-tg"
+# === Listeners ===================================
+resource "aws_lb_listener" "ecs-deploy" {
+  load_balancer_arn = aws_lb.ecs-deploy.arn
+  port              = 80
+  protocol          = "HTTP"
+  # ssl_policy        = "ELBSecurityPolicy-2016-08"
+  # certificate_arn   = var.cert_arn
+
+  default_action {
+    type = "fixed-response"
+
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Fixed response content"
+      status_code  = "200"
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "ecs-deploy_nginx" {
+  listener_arn      = aws_lb_listener.ecs-deploy.arn
+  priority          = 200
+
+  condition {
+    path_pattern {
+      values = ["/"]
+    }
+  }
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.ecs-deploy_nginx.arn
+  }
+}
+
+resource "aws_lb_listener_rule" "ecs-deploy_echo-server" {
+  listener_arn      = aws_lb_listener.ecs-deploy.arn
+  priority          = 100
+
+  condition {
+    path_pattern {
+      values = ["/param"]
+    }
+  }
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.ecs-deploy_echo-server.arn
+  }
+}
+# =================================================
+
+
+# === TargetGroups ================================
+resource "aws_lb_target_group" "ecs-deploy_nginx" {
+  name        = "ecs-deploy-nginx"
   port        = 80
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
@@ -32,20 +85,23 @@ resource "aws_lb_target_group" "ecs-deploy" {
     unhealthy_threshold = 3
   }
 }
-# =================================================
 
+resource "aws_lb_target_group" "ecs-deploy_echo-server" {
+  name        = "ecs-deploy-ehco-server"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
 
-# === Listener ====================================
-resource "aws_lb_listener" "ecs-deploy" {
-  load_balancer_arn = aws_lb.ecs-deploy.arn
-  port              = 80 
-  protocol          = "HTTP"
-  # ssl_policy        = "ELBSecurityPolicy-2016-08"
-  # certificate_arn   = var.cert_arn
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.ecs-deploy.arn
+  health_check {
+    enabled             = true
+    interval            = 10
+    path                = "/param"
+    port                = 80
+    protocol            = "HTTP"
+    timeout             = 5
+    healthy_threshold   = 5
+    unhealthy_threshold = 3
   }
 }
 # =================================================
