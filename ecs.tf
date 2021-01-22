@@ -198,7 +198,11 @@ resource "aws_ecs_task_definition" "ecs-deploy_echo-server" {
 [
   {
     "name": "echo-server",
-    "image": "ealen/echo-server",
+    "image": "hashicorp/http-echo",
+    "command": [
+      "-listen=:80",
+      "-text='Hello World!!'"
+    ],
     "essential": true,
     "cpu": 100,
     "memory": 512,
