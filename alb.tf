@@ -54,7 +54,7 @@ resource "aws_lb_listener_rule" "ecs-deploy_echo-server" {
 
   condition {
     path_pattern {
-      values = ["/param"]
+      values = ["/echo"]
     }
   }
 
@@ -96,7 +96,7 @@ resource "aws_lb_target_group" "ecs-deploy_echo-server" {
   health_check {
     enabled             = true
     interval            = 10
-    path                = "/param"
+    path                = "/health"
     port                = 80
     protocol            = "HTTP"
     timeout             = 5
