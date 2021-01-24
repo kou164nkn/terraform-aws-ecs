@@ -32,7 +32,7 @@ resource "aws_lb_listener" "ecs-deploy" {
   }
 }
 
-resource "aws_lb_listener_rule" "ecs-deploy_nginx" {
+resource "aws_lb_listener_rule" "ecs_nginx" {
   listener_arn      = aws_lb_listener.ecs-deploy.arn
   priority          = 200
 
@@ -44,11 +44,11 @@ resource "aws_lb_listener_rule" "ecs-deploy_nginx" {
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.ecs-deploy_nginx.arn
+    target_group_arn = aws_lb_target_group.ecs_nginx.arn
   }
 }
 
-resource "aws_lb_listener_rule" "ecs-deploy_echo-server" {
+resource "aws_lb_listener_rule" "ecs_echo-server" {
   listener_arn      = aws_lb_listener.ecs-deploy.arn
   priority          = 100
 
@@ -60,15 +60,15 @@ resource "aws_lb_listener_rule" "ecs-deploy_echo-server" {
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.ecs-deploy_echo-server.arn
+    target_group_arn = aws_lb_target_group.ecs_echo-server.arn
   }
 }
 # =================================================
 
 
 # === TargetGroups ================================
-resource "aws_lb_target_group" "ecs-deploy_nginx" {
-  name        = "ecs-deploy-nginx"
+resource "aws_lb_target_group" "ecs_nginx" {
+  name        = "ecs-nginx"
   port        = 80
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
@@ -86,8 +86,8 @@ resource "aws_lb_target_group" "ecs-deploy_nginx" {
   }
 }
 
-resource "aws_lb_target_group" "ecs-deploy_echo-server" {
-  name        = "ecs-deploy-ehco-server"
+resource "aws_lb_target_group" "ecs_echo-server" {
+  name        = "ecs-ehco-server"
   port        = 80
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
