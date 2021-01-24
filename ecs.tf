@@ -226,3 +226,65 @@ resource "aws_ecs_task_definition" "ecs-deploy_echo-server" {
 ])
 }
 # =======================================================
+
+
+# === ECS Service like background process ===============
+resource "aws_cloudwatch_log_group" "ecs_background_worker" {
+  name = "/aws/ecs/background-worker"
+}
+
+resource "aws_ecs_service" "background_worker" {
+  name            = "background-worker"
+  cluster         = aws_ecs_cluster.ecs-deploy.id
+  task_definition = aws_ecs_task_definition.background_worker.arn
+
+  desired_count    = 1
+  launch_type      = "FARGATE"
+  platform_version = "1.4.0"
+  propagate_tags   = "TASK_DEFINITION"
+
+  network_configuration {
+    subnets = aws_subnet.private-subnet[*].id
+
+    security_groups = [ aws_security_group.ecs-deploy.id ]
+  }
+}
+
+
+resource "aws_ecs_task_definition" "background_worker" {
+  family                   = "background-worker"
+  requires_compatibilities = ["FARGATE"]
+
+  network_mode = "awsvpc"
+  cpu          = "256"
+  memory       = "512"
+
+  execution_role_arn = data.aws_iam_role.official-ecs-exec.arn
+
+  container_definitions = jsonencode(
+[
+  {
+    "name": "background-worker",
+    "image": "ghcr.io/kou164nkn/simple-rainbow:0.2.0",
+    "essential": true,
+    "cpu": 100,
+    "memory": 512,
+    "memoryReservation": 256,
+    "healthCheck" : {
+      "command": [ "CMD-SHELL", "ps ax | grep -v grep | grep simple-rainbow" ],
+      "interval": 10,
+      "timeout": 5,
+      "startPeriod": 10
+    },
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/aws/ecs/background-worker",
+        "awslogs-region": "ap-northeast-1",
+        "awslogs-stream-prefix": "background-worker"
+      }
+    }
+  }
+])
+}
+# =======================================================
