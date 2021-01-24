@@ -79,14 +79,14 @@ resource "aws_security_group" "ecs-deploy" {
 
 
 # === ECS Service for nginx =============================
-resource "aws_cloudwatch_log_group" "ecs-deploy_nginx" {
-  name = "/aws/ecs/ecs-deploy_nginx"
+resource "aws_cloudwatch_log_group" "ecs_nginx" {
+  name = "/aws/ecs/nginx"
 }
 
-resource "aws_ecs_service" "ecs-deploy_nginx" {
-  name            = "ecs-deploy_nginx"
+resource "aws_ecs_service" "nginx" {
+  name            = "nginx"
   cluster         = aws_ecs_cluster.ecs-deploy.id
-  task_definition = aws_ecs_task_definition.ecs-deploy_nginx.arn
+  task_definition = aws_ecs_task_definition.nginx.arn
 
   desired_count    = 2
   launch_type      = "FARGATE"
@@ -96,7 +96,7 @@ resource "aws_ecs_service" "ecs-deploy_nginx" {
   health_check_grace_period_seconds = 20
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.ecs-deploy_nginx.arn
+    target_group_arn = aws_lb_target_group.ecs_nginx.arn
     container_name   = "nginx"
     container_port   = 80
   }
@@ -111,8 +111,8 @@ resource "aws_ecs_service" "ecs-deploy_nginx" {
 }
 
 
-resource "aws_ecs_task_definition" "ecs-deploy_nginx" {
-  family                   = "ecs-deploy_nginx"
+resource "aws_ecs_task_definition" "nginx" {
+  family                   = "nginx"
   requires_compatibilities = ["FARGATE"]
 
   network_mode = "awsvpc"
@@ -140,9 +140,9 @@ resource "aws_ecs_task_definition" "ecs-deploy_nginx" {
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
-        "awslogs-group": "/aws/ecs/ecs-deploy_nginx",
+        "awslogs-group": "/aws/ecs/nginx",
         "awslogs-region": "ap-northeast-1",
-        "awslogs-stream-prefix": "ecs_nginx"
+        "awslogs-stream-prefix": "nginx"
       }
     }
   }
@@ -152,14 +152,14 @@ resource "aws_ecs_task_definition" "ecs-deploy_nginx" {
 
 
 # === ECS Service for echo-server =======================
-resource "aws_cloudwatch_log_group" "ecs-deploy_echo-server" {
-  name = "/aws/ecs/ecs-deploy_echo-server"
+resource "aws_cloudwatch_log_group" "ecs_echo-server" {
+  name = "/aws/ecs/echo-server"
 }
 
-resource "aws_ecs_service" "ecs-deploy_echo-server" {
-  name            = "ecs-deploy_echo-server"
+resource "aws_ecs_service" "echo-server" {
+  name            = "echo-server"
   cluster         = aws_ecs_cluster.ecs-deploy.id
-  task_definition = aws_ecs_task_definition.ecs-deploy_echo-server.arn
+  task_definition = aws_ecs_task_definition.echo-server.arn
 
   desired_count    = 2
   launch_type      = "FARGATE"
@@ -169,7 +169,7 @@ resource "aws_ecs_service" "ecs-deploy_echo-server" {
   health_check_grace_period_seconds = 20
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.ecs-deploy_echo-server.arn
+    target_group_arn = aws_lb_target_group.ecs_echo-server.arn
     container_name   = "echo-server"
     container_port   = 80
   }
@@ -184,8 +184,8 @@ resource "aws_ecs_service" "ecs-deploy_echo-server" {
 }
 
 
-resource "aws_ecs_task_definition" "ecs-deploy_echo-server" {
-  family                   = "ecs-deploy_echo-server"
+resource "aws_ecs_task_definition" "echo-server" {
+  family                   = "echo-server"
   requires_compatibilities = ["FARGATE"]
 
   network_mode = "awsvpc"
@@ -217,9 +217,71 @@ resource "aws_ecs_task_definition" "ecs-deploy_echo-server" {
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
-        "awslogs-group": "/aws/ecs/ecs-deploy_echo-server",
+        "awslogs-group": "/aws/ecs/echo-server",
         "awslogs-region": "ap-northeast-1",
-        "awslogs-stream-prefix": "ecs_echo-server"
+        "awslogs-stream-prefix": "echo-server"
+      }
+    }
+  }
+])
+}
+# =======================================================
+
+
+# === ECS Service like background process ===============
+resource "aws_cloudwatch_log_group" "ecs_background_worker" {
+  name = "/aws/ecs/background-worker"
+}
+
+resource "aws_ecs_service" "background_worker" {
+  name            = "background-worker"
+  cluster         = aws_ecs_cluster.ecs-deploy.id
+  task_definition = aws_ecs_task_definition.background_worker.arn
+
+  desired_count    = 1
+  launch_type      = "FARGATE"
+  platform_version = "1.4.0"
+  propagate_tags   = "TASK_DEFINITION"
+
+  network_configuration {
+    subnets = aws_subnet.private-subnet[*].id
+
+    security_groups = [ aws_security_group.ecs-deploy.id ]
+  }
+}
+
+
+resource "aws_ecs_task_definition" "background_worker" {
+  family                   = "background-worker"
+  requires_compatibilities = ["FARGATE"]
+
+  network_mode = "awsvpc"
+  cpu          = "256"
+  memory       = "512"
+
+  execution_role_arn = data.aws_iam_role.official-ecs-exec.arn
+
+  container_definitions = jsonencode(
+[
+  {
+    "name": "background-worker",
+    "image": "ghcr.io/kou164nkn/simple-rainbow:0.2.0",
+    "essential": true,
+    "cpu": 100,
+    "memory": 512,
+    "memoryReservation": 256,
+    "healthCheck" : {
+      "command": [ "CMD-SHELL", "ps ax | grep -v grep | grep simple-rainbow" ],
+      "interval": 10,
+      "timeout": 5,
+      "startPeriod": 10
+    },
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/aws/ecs/background-worker",
+        "awslogs-region": "ap-northeast-1",
+        "awslogs-stream-prefix": "background-worker"
       }
     }
   }

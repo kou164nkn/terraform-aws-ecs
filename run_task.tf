@@ -1,5 +1,5 @@
-resource "aws_cloudwatch_log_group" "ecs-deploy_run_task" {
-  name = "/aws/ecs/ecs-deploy_run-task"
+resource "aws_cloudwatch_log_group" "ecs_run_task" {
+  name = "/aws/ecs/run-task"
 }
 
 
@@ -20,6 +20,7 @@ resource "aws_cloudwatch_event_target" "run_task" {
     task_count          = 1
     task_definition_arn = aws_ecs_task_definition.run_task.arn
     launch_type         = "FARGATE"
+    platform_version    = "1.4.0"
 
     network_configuration {
       subnets = aws_subnet.private-subnet[*].id
@@ -29,7 +30,7 @@ resource "aws_cloudwatch_event_target" "run_task" {
 
 
 resource "aws_ecs_task_definition" "run_task" {
-  family                   = "ecs-deploy_run-task"
+  family                   = "run-task"
   requires_compatibilities = ["FARGATE"]
 
   network_mode = "awsvpc"
@@ -54,9 +55,9 @@ resource "aws_ecs_task_definition" "run_task" {
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
-        "awslogs-group": "/aws/ecs/ecs-deploy_run-task",
+        "awslogs-group": "/aws/ecs/run-task",
         "awslogs-region": "ap-northeast-1",
-        "awslogs-stream-prefix": "ecs_run-task"
+        "awslogs-stream-prefix": "run-task"
       }
     }
   }
