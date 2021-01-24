@@ -274,6 +274,7 @@ resource "aws_ecs_task_definition" "background_worker" {
       "command": [ "CMD-SHELL", "ps ax | grep -v grep | grep simple-rainbow" ],
       "interval": 10,
       "timeout": 5,
+      "retries": 3,
       "startPeriod": 10
     },
     "logConfiguration": {
