@@ -20,6 +20,7 @@ resource "aws_cloudwatch_event_target" "run_task" {
     task_count          = 1
     task_definition_arn = aws_ecs_task_definition.run_task.arn
     launch_type         = "FARGATE"
+    platform_version    = "1.4.0"
 
     network_configuration {
       subnets = aws_subnet.private-subnet[*].id
