@@ -5,6 +5,50 @@ resource "aws_ecs_cluster" "ecs-deploy" {
 # =======================================================
 
 
+# === IAM for Task Role =================================
+resource "aws_iam_role" "task_role" {
+  name = "ecsTaskRole"
+
+  assume_role_policy = jsonencode(
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+})
+}
+
+resource "aws_iam_role_policy" "task_role" {
+  name = "ecsTaskExecuteCommandRolePolicy"
+  role = aws_iam_role.task_role.id
+
+  policy = jsonencode(
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ssmmessages:CreateControlChannel",
+        "ssmmessages:CreateDataChannel",
+        "ssmmessages:OpenControlChannel",
+        "ssmmessages:OpenDataChannel"
+      ],
+      "Resource": "*"
+    }
+  ]
+})
+}
+# =======================================================
+
+
 # === IAM for executing task ============================
 data "aws_iam_role" "official-ecs-exec" {
   name = "ecsTaskExecutionRole"
@@ -93,6 +137,8 @@ resource "aws_ecs_service" "nginx" {
   platform_version = "1.4.0"
   propagate_tags   = "TASK_DEFINITION"
 
+  enable_execute_command = true
+
   health_check_grace_period_seconds = 20
 
   load_balancer {
@@ -119,6 +165,7 @@ resource "aws_ecs_task_definition" "nginx" {
   cpu          = "256"
   memory       = "512"
 
+  task_role_arn      = aws_iam_role.task_role.arn
   execution_role_arn = data.aws_iam_role.official-ecs-exec.arn
 
   container_definitions = jsonencode(
@@ -166,6 +213,8 @@ resource "aws_ecs_service" "echo-server" {
   platform_version = "1.4.0"
   propagate_tags   = "TASK_DEFINITION"
 
+  enable_execute_command = true
+
   health_check_grace_period_seconds = 20
 
   load_balancer {
@@ -192,6 +241,7 @@ resource "aws_ecs_task_definition" "echo-server" {
   cpu          = "256"
   memory       = "512"
 
+  task_role_arn      = aws_iam_role.task_role.arn
   execution_role_arn = data.aws_iam_role.official-ecs-exec.arn
 
   container_definitions = jsonencode(
@@ -243,6 +293,8 @@ resource "aws_ecs_service" "background_worker" {
   platform_version = "1.4.0"
   propagate_tags   = "TASK_DEFINITION"
 
+  enable_execute_command = true
+
   network_configuration {
     subnets = aws_subnet.private-subnet[*].id
 
@@ -259,6 +311,7 @@ resource "aws_ecs_task_definition" "background_worker" {
   cpu          = "256"
   memory       = "512"
 
+  task_role_arn      = aws_iam_role.task_role.arn
   execution_role_arn = data.aws_iam_role.official-ecs-exec.arn
 
   container_definitions = jsonencode(
